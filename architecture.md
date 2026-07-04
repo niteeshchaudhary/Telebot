@@ -28,8 +28,10 @@ graph TB
         FileSystem[File System]
     end
 
-    TG -->|HTTPS/Webhook| BotAPI
+    TG -.->|HTTPS/Webhook| BotAPI
     BotAPI -->|Updates| Main
+    TG ==>|Long Polling (getUpdates)| BotAPI
+    BotAPI ==>|Updates| Main
     Main --> App
     App --> Handlers
     Handlers --> SessionMgr
@@ -50,6 +52,8 @@ graph TB
   - `post_init()` - Initializes SessionManager, restores sessions
   - `post_shutdown()` - Cleanup on shutdown
   - `run_webhook()` / `run_polling()` - Webhook vs polling modes
+  - **Polling Mode**: `application.run_polling()` - Long-polls Telegram's `getUpdates` endpoint
+  - **Webhook Mode**: `run_webhook()` - Starts aiohttp server for Telegram to POST updates
   - Health check endpoint (`/health`)
 
 ### 2. **Configuration Layer** (`app/config.py`)
@@ -98,7 +102,7 @@ classDiagram
     }
     
     Session --> SessionStatus
-    UserState --> "user_id"
+    UserState --> Session : current_session_id
 ```
 
 #### Database Layer (`app/database.py`)
@@ -332,7 +336,19 @@ sequenceDiagram
 
 ### Modes
 1. **Polling** (default): `application.run_polling()`
+   - Long-polling via Telegram `getUpdates` API
+   - Bot initiates HTTPS requests to Telegram `getUpdates` endpoint
+   - Telegram responds with pending updates
+   - No public HTTPS endpoint required
+   - Simpler deployment (no reverse proxy/certs needed)
+   - Default mode when `WEBHOOK_MODE=false`
+
 2. **Webhook**: `run_webhook()` with aiohttp server
+   - Telegram pushes updates via HTTPS POST to your endpoint
+   - Requires public HTTPS URL with valid certificate
+   - Lower latency (push vs pull)
+   - Requires reverse proxy (nginx) + SSL certs
+   - Enabled when `WEBHOOK_MODE=true` + `WEBHOOK_URL` set
 
 ### Docker
 - `Dockerfile` - Multi-stage build
