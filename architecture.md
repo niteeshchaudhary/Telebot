@@ -10,7 +10,8 @@ Telebot is a Telegram bot that acts as a terminal multiplexer for OpenCode sessi
 
 ```mermaid
 graph TB
-    subgraph "Telegram Infrastructure"
+    subgraph "Telegram"
+        User[Users]
         TG[Telegram Servers]
         BotAPI[Bot API]
     end
@@ -28,10 +29,10 @@ graph TB
         FileSystem[File System]
     end
 
-    TG -.->|HTTPS/Webhook| BotAPI
-    BotAPI -->|Updates| Main
-    TG -->|Long Polling getUpdates| BotAPI
-    BotAPI -->|Updates| Main
+    User -->|Messages| TG
+    TG -->|Exposes| BotAPI
+    BotAPI <-->|Long Polling (getUpdates)| Main
+    BotAPI -.->|HTTPS Webhook POST| Main
     Main --> App
     App --> Handlers
     Handlers --> SessionMgr
