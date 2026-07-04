@@ -31,7 +31,8 @@ graph TB
 
     User -->|Messages| TG
     TG -->|Exposes| BotAPI
-    BotAPI <-->|Long Polling (getUpdates)| Main
+    BotAPI -->|Long Polling getUpdates| Main
+    Main -->|getUpdates Request| BotAPI
     BotAPI -.->|HTTPS Webhook POST| Main
     Main --> App
     App --> Handlers
