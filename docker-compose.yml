@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  telebot:
+    build: .
+    container_name: telebot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/telebot.db
+    volumes:
+      - telebot_data:/app/data
+      - ./projects:/home/appuser/projects:ro
+    networks:
+      - telebot-network
+    ports:
+      - "${WEBHOOK_PORT:-8443}:${WEBHOOK_PORT:-8443}"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import app.config; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  telebot_data:
+
+networks:
+  telebot-network:
+    driver: bridge
