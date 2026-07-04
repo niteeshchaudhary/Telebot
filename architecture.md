@@ -30,8 +30,8 @@ graph TB
 
     TG -.->|HTTPS/Webhook| BotAPI
     BotAPI -->|Updates| Main
-    TG ==>|Long Polling (getUpdates)| BotAPI
-    BotAPI ==>|Updates| Main
+    TG -->|Long Polling (getUpdates)| BotAPI
+    BotAPI -->|Updates| Main
     Main --> App
     App --> Handlers
     Handlers --> SessionMgr
