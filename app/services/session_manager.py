@@ -296,11 +296,24 @@ class SessionManager:
             return None, "Session not found or not initialized"
 
         working_dir = Path(db_session.cwd)
-        opencode_session_id, output = await self._run_opencode(
-            working_dir, db_session.opencode_session_id, message,
-            model=db_session.model, mode=db_session.mode,
-            callback=callback
-        )
+        
+        # Check if model is set and validate it
+        if db_session.model:
+            is_valid = await self.validate_model(db_session.model)
+            if not is_valid:
+                return None, f"Model '{db_session.model}' is not available. Use /model to see available models or /set_model to change."
+
+        try:
+            opencode_session_id, output = await self._run_opencode(
+                working_dir, db_session.opencode_session_id, message,
+                model=db_session.model, mode=db_session.mode,
+                callback=callback
+            )
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "model" in error_msg or "unknown model" in error_msg or "invalid model" in error_msg:
+                return None, f"Model error: {e}. Use /model to see available models or /set_model to change."
+            raise
 
         if opencode_session_id and opencode_session_id != db_session.opencode_session_id:
             # Session ID changed (forked), update it
@@ -812,3 +825,40 @@ class SessionManager:
     def is_user_allowed(self, user_id: int) -> bool:
         allowed_ids = settings.allowed_user_ids
         return user_id in allowed_ids if allowed_ids else True
+
+    async def get_available_models(self) -> list[str]:
+        """Get list of available models from opencode."""
+        try:
+            cmd = [self._opencode_executable, "models"]
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60.0)
+
+            output = stdout.decode("utf-8", errors="replace") if stdout else ""
+            error = stderr.decode("utf-8", errors="replace") if stderr else ""
+
+            if error and not output:
+                logger.error("get_available_models_failed", error=error)
+                return []
+
+            if not output:
+                return []
+
+            # Parse plain text output - one model per line
+            lines = output.strip().split("\n")
+            models = [line.strip() for line in lines if line.strip()]
+            return models
+        except TimeoutError:
+            logger.exception("get_available_models_timeout")
+            return []
+        except Exception as e:
+            logger.exception("get_available_models_failed", error=str(e))
+            return []
+
+    async def validate_model(self, model: str) -> bool:
+        """Check if model is available in opencode."""
+        models = await self.get_available_models()
+        return model in models

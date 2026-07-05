@@ -32,6 +32,10 @@ class TestModels:
             cwd="/home/user",
             status=SessionStatus.RUNNING,
             opencode_session_id="ses_test123",
+            model=None,
+            mode=None,
+            last_output=None,
+            last_output_fetched_at=None,
             created_at="2024-01-01T00:00:00",
             last_used="2024-01-01T00:00:00",
         )

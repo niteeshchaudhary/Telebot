@@ -760,6 +760,16 @@ async def cmd_set_model(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         session_id = session.id
 
     assert session_id is not None
+    
+    # Validate model exists in OpenCode
+    available_models = await session_manager.get_available_models()
+    if available_models and model not in available_models:
+        await message.reply_text(
+            f"❌ Model '{model}' not found in available models.\n"
+            f"Use /model to see available models."
+        )
+        return
+
     result = await session_manager.set_session_model(session_id, model)
     
     if result:
